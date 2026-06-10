@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}Pipeline — Lead Generator{% endblock %}
+{% block content %}
+
+{% if flash %}
+  <div class="mb-4 rounded-md border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-2 text-sm">
+    {{ flash }}
+  </div>
+{% endif %}
+
+<div class="card p-4 mb-6">
+  <div class="text-xs uppercase tracking-wide text-slate-500 mb-3">Actions</div>
+
+  <form method="post" action="/actions/hunt" class="flex flex-wrap items-end gap-2 mb-3">
+    <label class="flex-1 min-w-[150px]">
+      <span class="text-xs text-slate-500">Niche</span>
+      <input name="niche" required placeholder="dentists / restaurants / salons / ..."
+             class="w-full rounded-md border border-slate-200 px-2 py-1 mt-0.5 text-sm">
+    </label>
+    <label class="flex-1 min-w-[150px]">
+      <span class="text-xs text-slate-500">Location</span>
+      <input name="location" required placeholder="Mumbai, India"
+             class="w-full rounded-md border border-slate-200 px-2 py-1 mt-0.5 text-sm">
+    </label>
+    <label class="w-20">
+      <span class="text-xs text-slate-500">Limit</span>
+      <input name="limit" type="number" value="20" min="1" max="60"
+             class="w-full rounded-md border border-slate-200 px-2 py-1 mt-0.5 text-sm">
+    </label>
+    <label class="w-20">
+      <span class="text-xs text-slate-500">Region</span>
+      <input name="region" placeholder="IN" maxlength="2"
+             class="w-full rounded-md border border-slate-200 px-2 py-1 mt-0.5 text-sm uppercase">
+    </label>
+    <button class="px-3 py-2 rounded-md bg-slate-900 text-white text-sm font-medium hover:bg-slate-800">Hunt</button>
+  </form>
+
+  <div class="flex flex-wrap gap-2">
+    <form method="post" action="/actions/analyze" class="inline">
+      <input type="hidden" name="limit" value="50">
+      <button class="px-3 py-1.5 rounded bg-blue-600 text-white text-xs font-medium hover:bg-blue-500">Analyze pending</button>
+    </form>
+    <form method="post" action="/actions/opportunities" class="inline">
+      <input type="hidden" name="limit" value="50">
+      <button class="px-3 py-1.5 rounded bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-500">Score opportunities</button>
+    </form>
+    <form method="post" action="/actions/enrich" class="inline">
+      <input type="hidden" name="limit" value="50">
+      <button class="px-3 py-1.5 rounded bg-amber-500 text-white text-xs font-medium hover:bg-amber-400">Enrich emails</button>
+    </form>
+    <form method="post" action="/actions/write" class="inline">
+      <input type="hidden" name="limit" value="50">
+      <button class="px-3 py-1.5 rounded bg-purple-600 text-white text-xs font-medium hover:bg-purple-500">Draft messages</button>
+    </form>
+    <form method="post" action="/actions/queue" class="inline">
+      <input type="hidden" name="limit" value="50">
+      <button class="px-3 py-1.5 rounded bg-fuchsia-600 text-white text-xs font-medium hover:bg-fuchsia-500">Queue for approval</button>
+    </form>
+    <form method="post" action="/actions/send-emails" class="inline"
+          onsubmit="return confirm('Send all approved emails (up to 25) via Gmail right now?');">
+      <input type="hidden" name="limit" value="25">
+      <button class="px-3 py-1.5 rounded bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-500">Send approved emails</button>
+    </form>
+    <form method="post" action="/actions/monitor" class="inline">
+      <input type="hidden" name="limit" value="50">
+      <button class="px-3 py-1.5 rounded bg-pink-600 text-white text-xs font-medium hover:bg-pink-500">Check replies</button>
+    </form>
+    <form method="post" action="/actions/demos" class="inline">
+      <input type="hidden" name="limit" value="25">
+      <button class="px-3 py-1.5 rounded bg-orange-600 text-white text-xs font-medium hover:bg-orange-500">Draft demo invites</button>
+    </form>
+  </div>
+</div>
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+  <div class="card p-4">
+    <div class="text-xs uppercase tracking-wide text-slate-500">Prospects</div>
+    <div class="text-3xl font-semibold mt-1">{{ summary.total_prospects }}</div>
+  </div>
+  <div class="card p-4">
+    <div class="text-xs uppercase tracking-wide text-slate-500">Est. Monthly Pipeline</div>
+    <div class="text-3xl font-semibold mt-1 text-emerald-600">{{ summary.total_monthly_rev_inr | inr }}</div>
+    <div class="text-xs text-slate-400 mt-1">sum of best opportunity per prospect</div>
+  </div>
+  <div class="card p-4">
+    <div class="text-xs uppercase tracking-wide text-slate-500">Won</div>
+    <div class="text-3xl font-semibold mt-1 text-emerald-700">{{ summary.won_count }}</div>
+  </div>
+  <div class="card p-4">
+    <div class="text-xs uppercase tracking-wide text-slate-500">Lost</div>
+    <div class="text-3xl font-semibold mt-1 text-rose-600">{{ summary.lost_count }}</div>
+  </div>
+</div>
+
+<div class="card p-4 mb-4">
+  <div class="text-xs uppercase tracking-wide text-slate-500 mb-2">Pipeline</div>
+  <div class="flex flex-wrap gap-2">
+    {% for s in PIPELINE_STAGES %}
+      <a href="/?{% if current_industry %}industry={{ current_industry }}&{% endif %}stage={{ s }}"
+         class="badge {{ STAGE_COLORS[s] }} {% if current_stage == s %}ring-2 ring-offset-1 ring-slate-400{% endif %}">
+        {{ s }} · {{ summary.stage_counts.get(s, 0) }}
+      </a>
+    {% endfor %}
+    {% if current_stage or current_industry %}
+      <a href="/" class="badge bg-slate-50 text-slate-500 hover:bg-slate-100">clear filters</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card p-4 mb-4 flex flex-wrap items-center gap-3">
+  <div class="text-xs uppercase tracking-wide text-slate-500">Industry</div>
+  <a href="/?{% if current_stage %}stage={{ current_stage }}{% endif %}"
+     class="badge bg-slate-100 text-slate-700 {% if not current_industry %}ring-2 ring-slate-300{% endif %}">all</a>
+  {% for ind in industries %}
+    <a href="/?{% if current_stage %}stage={{ current_stage }}&{% endif %}industry={{ ind }}"
+       class="badge bg-slate-100 text-slate-700 {% if current_industry == ind %}ring-2 ring-slate-400{% endif %}">{{ ind }}</a>
+  {% endfor %}
+</div>
+
+<div class="card overflow-hidden">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+      <tr>
+        <th class="text-left px-4 py-2 font-medium">Business</th>
+        <th class="text-left px-4 py-2 font-medium">Industry</th>
+        <th class="text-right px-4 py-2 font-medium">Lead</th>
+        <th class="text-right px-4 py-2 font-medium">Site</th>
+        <th class="text-right px-4 py-2 font-medium">Rev /mo</th>
+        <th class="text-right px-4 py-2 font-medium">ROI mo</th>
+        <th class="text-left px-4 py-2 font-medium">Pitch</th>
+        <th class="text-left px-4 py-2 font-medium">Stage</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+      {% for r in rows %}
+        <tr class="table-row cursor-pointer" onclick="window.location='/prospects/{{ r.id }}'">
+          <td class="px-4 py-3">
+            <div class="font-medium">{{ r.business_name }}</div>
+            <div class="text-xs text-slate-500">{{ r.phone or "—" }}</div>
+          </td>
+          <td class="px-4 py-3 text-slate-600">{{ r.industry }}</td>
+          <td class="px-4 py-3 text-right font-semibold">{{ r.lead_score }}</td>
+          <td class="px-4 py-3 text-right text-slate-600">{{ r.analysis.final_score if r.analysis else "—" }}</td>
+          <td class="px-4 py-3 text-right text-emerald-700 font-semibold">
+            {{ r.opportunity.monthly_revenue_impact_inr | inr if r.opportunity else "—" }}
+          </td>
+          <td class="px-4 py-3 text-right text-slate-600">
+            {{ "%.2f" | format(r.opportunity.roi_months) if r.opportunity and r.opportunity.roi_months else "—" }}
+          </td>
+          <td class="px-4 py-3 text-slate-700">{{ r.opportunity.primary_service if r.opportunity else r.recommended_service or "—" }}</td>
+          <td class="px-4 py-3">
+            <span class="badge {{ STAGE_COLORS[r.stage or 'new'] }}">{{ r.stage or 'new' }}</span>
+          </td>
+        </tr>
+      {% endfor %}
+      {% if not rows %}
+        <tr><td colspan="8" class="px-4 py-8 text-center text-slate-500">No prospects match these filters.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

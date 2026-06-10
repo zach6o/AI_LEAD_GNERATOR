@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+{% block title %}{{ row.business_name }} — Lead Generator{% endblock %}
+{% block content %}
+
+<div class="mb-4">
+  <a href="/" class="text-sm text-slate-500 hover:text-slate-800">← Back to pipeline</a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <!-- Left column: identity + actions -->
+  <div class="lg:col-span-1 space-y-4">
+    <div class="card p-5">
+      <div class="text-xs uppercase tracking-wide text-slate-500">{{ row.industry }}</div>
+      <h1 class="text-xl font-semibold mt-1">{{ row.business_name }}</h1>
+      <div class="text-sm text-slate-500 mt-1">{{ row.location or "" }}</div>
+
+      <form method="post" action="/prospects/{{ row.id }}/contact" class="mt-4 space-y-2 text-sm">
+        <label class="block">
+          <span class="text-xs text-slate-500">Phone</span>
+          <input name="phone" value="{{ row.phone or '' }}"
+                 class="w-full rounded-md border border-slate-200 px-2 py-1 mt-0.5 text-sm"
+                 placeholder="+91 ...">
+        </label>
+        <label class="block">
+          <span class="text-xs text-slate-500">Email</span>
+          <input name="email" value="{{ row.email or '' }}" type="email"
+                 class="w-full rounded-md border border-slate-200 px-2 py-1 mt-0.5 text-sm"
+                 placeholder="info@example.com">
+        </label>
+        <div class="flex justify-end">
+          <button class="px-2 py-1 rounded bg-slate-900 text-white text-xs font-medium hover:bg-slate-800">Save contact</button>
+        </div>
+      </form>
+
+      <dl class="mt-3 space-y-1 text-sm">
+        {% if row.website %}
+          <div class="flex justify-between"><dt class="text-slate-500">Website</dt><dd class="text-right truncate max-w-[12rem]"><a class="text-blue-600 hover:underline" href="{{ row.website }}" target="_blank">{{ row.website }}</a></dd></div>
+        {% endif %}
+        <div class="flex justify-between"><dt class="text-slate-500">Google rating</dt><dd>{{ row.google_rating or "—" }} ({{ row.google_reviews or 0 }} reviews)</dd></div>
+        <div class="flex justify-between"><dt class="text-slate-500">Lead score</dt><dd class="font-semibold">{{ row.lead_score }}/100</dd></div>
+        {% if row.last_contacted %}
+          <div class="flex justify-between"><dt class="text-slate-500">Last contacted</dt><dd>{{ row.last_contacted[:10] }}</dd></div>
+        {% endif %}
+      </dl>
+    </div>
+
+    <div class="card p-5">
+      <div class="text-xs uppercase tracking-wide text-slate-500 mb-2">Pipeline stage</div>
+      <form method="post" action="/prospects/{{ row.id }}/stage" class="flex items-center gap-2">
+        <select name="stage" class="flex-1 rounded-md border border-slate-200 px-3 py-2 text-sm">
+          {% for s in PIPELINE_STAGES %}
+            <option value="{{ s }}" {% if (row.stage or 'new') == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+        <button class="px-3 py-2 rounded-md bg-slate-900 text-white text-sm font-medium hover:bg-slate-800">Save</button>
+      </form>
+    </div>
+
+    <div class="card p-5">
+      <div class="text-xs uppercase tracking-wide text-slate-500 mb-2">Notes</div>
+      <form method="post" action="/prospects/{{ row.id }}/notes" class="space-y-2">
+        <textarea name="notes" rows="6" class="w-full rounded-md border border-slate-200 px-3 py-2 text-sm" placeholder="Call log, objections, next steps...">{{ row.notes or "" }}</textarea>
+        <div class="flex justify-end">
+          <button class="px-3 py-2 rounded-md bg-slate-900 text-white text-sm font-medium hover:bg-slate-800">Save notes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Right column: opportunity + analysis -->
+  <div class="lg:col-span-2 space-y-4">
+    {% if row.opportunity %}
+      <div class="card p-5 border-l-4 border-emerald-400">
+        <div class="text-xs uppercase tracking-wide text-slate-500">Recommended pitch</div>
+        <h2 class="text-xl font-semibold mt-1">{{ row.opportunity.primary_service }}</h2>
+
+        <p class="mt-3 text-slate-700 leading-relaxed">{{ row.opportunity.pitch_summary }}</p>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
+          <div>
+            <div class="text-xs text-slate-500">Est. revenue impact /mo</div>
+            <div class="text-lg font-semibold text-emerald-700">{{ row.opportunity.monthly_revenue_impact_inr | inr }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500">ROI months</div>
+            <div class="text-lg font-semibold">{{ "%.2f" | format(row.opportunity.roi_months) if row.opportunity.roi_months else "—" }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500">Confidence</div>
+            <div class="text-lg font-semibold">{{ row.opportunity.confidence }}/100</div>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500">Hours saved /wk</div>
+            <div class="text-lg font-semibold">{{ row.opportunity.hours_saved_per_week or "—" }}</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mt-4 text-sm">
+          <div class="rounded-md bg-slate-50 p-3">
+            <div class="text-xs text-slate-500">Our one-time fee</div>
+            <div class="font-semibold">{{ row.opportunity.our_one_time_inr | inr }}</div>
+          </div>
+          <div class="rounded-md bg-slate-50 p-3">
+            <div class="text-xs text-slate-500">Our monthly</div>
+            <div class="font-semibold">{{ row.opportunity.our_monthly_inr | inr }}</div>
+          </div>
+        </div>
+
+        {% if row.opportunity.secondary_services %}
+          <div class="mt-4 text-sm">
+            <span class="text-slate-500">Up-sell:</span>
+            {% for s in row.opportunity.secondary_services %}
+              <span class="badge bg-indigo-50 text-indigo-700 ml-1">{{ s }}</span>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    {% if row.replies %}
+      <div class="card p-5">
+        <div class="text-xs uppercase tracking-wide text-slate-500">Replies received</div>
+        <h3 class="text-lg font-semibold mt-1">{{ row.replies | length }} reply{{ '' if row.replies|length == 1 else 'ies' }}</h3>
+        <div class="mt-4 space-y-3">
+          {% for rep in row.replies %}
+            <div class="rounded-lg border border-slate-200 p-3 bg-slate-50/40">
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <span class="badge {{ INTENT_COLORS.get(rep.intent, 'bg-slate-100 text-slate-600') }}">{{ rep.intent.replace('_',' ') }}</span>
+                <span class="text-xs text-slate-500">
+                  {{ (rep.received_at or '')[:19].replace('T', ' ') }} UTC · {{ rep.channel }}
+                </span>
+              </div>
+              <div class="text-xs text-slate-500">From</div>
+              <div class="text-sm mb-1">{{ rep.from_address or "—" }}</div>
+              {% if rep.subject %}
+                <div class="text-xs text-slate-500">Subject</div>
+                <div class="text-sm font-medium mb-2">{{ rep.subject }}</div>
+              {% endif %}
+              <pre class="whitespace-pre-wrap font-sans text-sm text-slate-800 leading-relaxed">{{ rep.body[:2000] }}</pre>
+              {% if rep.body|length > 2000 %}
+                <div class="mt-1 text-xs text-slate-400">…truncated ({{ rep.body|length }} chars)</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Outreach messages -->
+    <div class="card p-5">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs uppercase tracking-wide text-slate-500">Outreach drafts</div>
+          <h3 class="text-lg font-semibold mt-1">Messages</h3>
+        </div>
+        <form method="post" action="/prospects/{{ row.id }}/draft">
+          <button class="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500">
+            {% if row.messages %}Regenerate drafts{% else %}Draft messages{% endif %}
+          </button>
+        </form>
+      </div>
+
+      {% if not row.messages %}
+        <div class="mt-4 text-sm text-slate-500">No drafts yet. Click <em>Draft messages</em> to generate email, WhatsApp and LinkedIn variants from this prospect's opportunity.</div>
+      {% else %}
+        <div class="mt-4 space-y-6">
+          {% for channel in ['email', 'whatsapp', 'linkedin'] %}
+            {% if channel in row.messages %}
+              <div>
+                <div class="text-sm font-semibold text-slate-700 capitalize mb-2">{{ channel }}</div>
+                <div class="space-y-3">
+                  {% for kind in ['initial', 'followup_1', 'followup_2', 'demo_invite'] %}
+                    {% set m = row.messages[channel].get(kind) %}
+                    {% if m %}
+                      <div class="rounded-lg border border-slate-200 p-3 bg-slate-50/40">
+                        <div class="flex items-center justify-between gap-2 mb-2">
+                          <span class="badge bg-slate-100 text-slate-600">{{ kind.replace('_',' ') }}</span>
+                          <div class="flex items-center gap-2">
+                            <span class="badge
+                              {% if m.status == 'approved' %}bg-emerald-100 text-emerald-700
+                              {% elif m.status == 'rejected' %}bg-rose-100 text-rose-700
+                              {% elif m.status == 'sent' %}bg-blue-100 text-blue-700
+                              {% elif m.status == 'pending_approval' %}bg-amber-100 text-amber-700
+                              {% else %}bg-slate-100 text-slate-600{% endif %}">{{ m.status.replace('_',' ') }}</span>
+                            <button type="button" class="text-xs text-slate-500 hover:text-slate-800"
+                              onclick="copyText('msg-{{ m.id }}', this)">Copy</button>
+                          </div>
+                        </div>
+                        {% if m.subject %}
+                          <div class="text-xs text-slate-500 mb-1">Subject</div>
+                          <div class="text-sm font-medium mb-2">{{ m.subject }}</div>
+                        {% endif %}
+                        <pre id="msg-{{ m.id }}" class="whitespace-pre-wrap font-sans text-sm text-slate-800 leading-relaxed">{{ m.body }}</pre>
+
+                        <div class="mt-3 flex items-center gap-2 text-xs flex-wrap">
+                          {% if m.status != 'approved' and m.status != 'sent' %}
+                            <form method="post" action="/messages/{{ m.id }}/status" class="inline">
+                              <input type="hidden" name="prospect_id" value="{{ row.id }}">
+                              <input type="hidden" name="status" value="approved">
+                              <button class="px-2 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-500">Approve</button>
+                            </form>
+                          {% endif %}
+                          {% if m.status == 'approved' and channel == 'email' %}
+                            <form method="post" action="/messages/{{ m.id }}/send" class="inline"
+                                  onsubmit="return confirm('Send this email now to {{ row.email }}?')">
+                              <input type="hidden" name="prospect_id" value="{{ row.id }}">
+                              <button class="px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-500 font-semibold">Send now</button>
+                            </form>
+                          {% endif %}
+                          {% if m.status == 'approved' and channel == 'whatsapp' %}
+                            {% set walink = (row.phone | wa_link(m.body)) %}
+                            {% if walink %}
+                              <a href="{{ walink }}" target="_blank" rel="noopener"
+                                 class="px-2 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-500 font-semibold no-underline">
+                                Open in WhatsApp
+                              </a>
+                              <form method="post" action="/messages/{{ m.id }}/mark-sent" class="inline"
+                                    onsubmit="return confirm('Mark this WhatsApp as sent? Do this after you press Send inside WhatsApp.')">
+                                <input type="hidden" name="prospect_id" value="{{ row.id }}">
+                                <button class="px-2 py-1 rounded bg-slate-900 text-white hover:bg-slate-700">Mark sent</button>
+                              </form>
+                            {% else %}
+                              <span class="text-rose-700">no phone</span>
+                            {% endif %}
+                          {% endif %}
+                          {% if m.status not in ['rejected', 'sent'] %}
+                            <form method="post" action="/messages/{{ m.id }}/status" class="inline">
+                              <input type="hidden" name="prospect_id" value="{{ row.id }}">
+                              <input type="hidden" name="status" value="rejected">
+                              <button class="px-2 py-1 rounded bg-rose-50 text-rose-700 hover:bg-rose-100">Reject</button>
+                            </form>
+                          {% endif %}
+                          {% if m.status != 'sent' %}
+                            <button type="button" class="px-2 py-1 rounded bg-slate-100 text-slate-700 hover:bg-slate-200"
+                              onclick="document.getElementById('edit-{{ m.id }}').classList.toggle('hidden')">Edit</button>
+                          {% endif %}
+                          <span class="text-slate-400 ml-auto">{{ m.generated_by }}</span>
+                        </div>
+                        {% if m.send_error %}
+                          <div class="mt-2 text-xs text-rose-700 bg-rose-50 rounded p-2">Last error: {{ m.send_error }}</div>
+                        {% endif %}
+                        {% if m.sent_at %}
+                          <div class="mt-2 text-xs text-emerald-700">Sent {{ m.sent_at[:19].replace('T', ' ') }} UTC</div>
+                        {% endif %}
+
+                        <form id="edit-{{ m.id }}" method="post" action="/messages/{{ m.id }}/edit" class="hidden mt-3 space-y-2">
+                          <input type="hidden" name="prospect_id" value="{{ row.id }}">
+                          {% if m.subject is not none %}
+                            <input name="subject" value="{{ m.subject }}" class="w-full rounded-md border border-slate-200 px-2 py-1 text-sm" placeholder="Subject">
+                          {% endif %}
+                          <textarea name="body" rows="8" class="w-full rounded-md border border-slate-200 px-2 py-1 text-sm font-mono">{{ m.body }}</textarea>
+                          <div class="flex justify-end">
+                            <button class="px-3 py-1 rounded bg-slate-900 text-white text-sm">Save edit</button>
+                          </div>
+                        </form>
+                      </div>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+
+        <script>
+          function copyText(id, btn) {
+            const el = document.getElementById(id);
+            const subjectEl = el.parentElement.querySelector('.text-sm.font-medium');
+            const text = (subjectEl ? subjectEl.innerText + '\n\n' : '') + el.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+              const old = btn.innerText; btn.innerText = 'Copied!';
+              setTimeout(() => btn.innerText = old, 1200);
+            });
+          }
+        </script>
+      {% endif %}
+    </div>
+
+    {% if row.analysis %}
+      <div class="card p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-xs uppercase tracking-wide text-slate-500">Website analysis</div>
+            <h3 class="text-lg font-semibold mt-1">Site health: {{ row.analysis.final_score }}/100</h3>
+          </div>
+          {% if row.analysis.response_ms is not none %}
+            <div class="text-sm text-slate-500">{{ row.analysis.response_ms }} ms · HTTP {{ row.analysis.http_status or "—" }}</div>
+          {% endif %}
+        </div>
+
+        {% if row.analysis.issues %}
+          <ul class="mt-4 space-y-1 text-sm">
+            {% for issue in row.analysis.issues %}
+              <li class="flex items-start gap-2"><span class="text-rose-500 mt-0.5">●</span><span>{{ issue }}</span></li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="mt-4 text-sm text-slate-500">No issues flagged.</div>
+        {% endif %}
+
+        <div class="mt-4 flex flex-wrap gap-2 text-xs">
+          {% for label, present in [
+              ("SSL", row.analysis.has_viewport),
+              ("Mobile viewport", row.analysis.has_viewport),
+              ("Chat widget", row.analysis.has_chat),
+              ("Booking", row.analysis.has_booking),
+              ("Lead form", row.analysis.has_lead_form),
+              ("Analytics", row.analysis.has_analytics),
+          ] %}
+            <span class="badge {% if present %}bg-emerald-100 text-emerald-700{% else %}bg-slate-100 text-slate-500{% endif %}">
+              {% if present %}✓{% else %}×{% endif %} {{ label }}
+            </span>
+          {% endfor %}
+        </div>
+
+        {% if row.analysis.tech_detected %}
+          <div class="mt-3 text-xs text-slate-500">Detected: {{ row.analysis.tech_detected | join(", ") }}</div>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
