@@ -79,6 +79,12 @@ templates.env.globals["INTENT_COLORS"] = INTENT_COLORS
 app = FastAPI(title="Lead Generator Dashboard")
 
 
+@app.get("/health")
+def health_check():
+    """Health check endpoint for Fly.io and other orchestration platforms."""
+    return {"status": "ok", "service": "lead-generator"}
+
+
 def _load_prospects(stage: str | None, industry: str | None) -> list[dict]:
     q = (
         client()
