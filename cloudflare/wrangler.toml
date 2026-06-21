@@ -1,17 +1,16 @@
 name = "ai-lead-generator-dashboard"
-main = "src/index.ts"
 compatibility_date = "2025-09-01"
 compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "./dist"
 
-# Secrets set via `wrangler secret put`:
-#   SUPABASE_URL
-#   SUPABASE_SERVICE_ROLE_KEY
-#   FLY_TRIGGER_URL                (e.g. https://your-app.fly.dev/api/trigger)
-#   FLY_TRIGGER_TOKEN              (shared secret you also set on the Fly side)
-
-[vars]
-PIPELINE_STAGES = "new,analyzed,approved,contacted,replied,demo_scheduled,proposal_sent,won,lost"
-
-# Optional: nightly Cron to nudge Fly.io to run the reply monitor.
-# [triggers]
-# crons = ["*/10 * * * *"]
+# Pages Advanced Mode: every request goes through dist/_worker.js (bundled
+# from src/index.ts by `npm run build`). Pages dashboard auto-discovers this.
+#
+# Environment variables — set these in the Pages dashboard under
+#   Settings → Environment variables (NOT here, NOT in git):
+#     SUPABASE_URL
+#     SUPABASE_SERVICE_ROLE_KEY  (mark as "Encrypted")
+#     FLY_TRIGGER_URL
+#     FLY_TRIGGER_TOKEN          (mark as "Encrypted")
+#
+# No wrangler CLI required for deploy if you connect GitHub from the dashboard.
