@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --format=esm --target=es2022 --platform=neutral --conditions=worker,browser --jsx=automatic --jsx-import-source=hono/jsx --outfile=dist/_worker.js",
+    "build": "esbuild src/index.tsx --bundle --format=esm --target=es2022 --platform=neutral --conditions=worker,browser --jsx=automatic --jsx-import-source=hono/jsx --outfile=dist/_worker.js",
     "dev": "wrangler pages dev dist --compatibility-flags=nodejs_compat",
     "deploy": "npm run build && wrangler pages deploy dist",
     "typecheck": "tsc --noEmit"
