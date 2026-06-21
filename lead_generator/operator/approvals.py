@@ -27,13 +27,6 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from ..db import client
-from . import notifier
-
-
-# Button id schema: "<action>:<approval_id>".
-# Kept short because WhatsApp caps button.reply.id at 256 chars.
-APPROVE_PREFIX = "ok"
-REJECT_PREFIX = "no"
 
 
 @dataclass
@@ -109,34 +102,11 @@ def request_approval(
 
 
 def _notify(approval: Approval) -> None:
-    """Send the operator a WhatsApp prompt with Approve/Reject buttons."""
-    aid = approval.id
-    short = aid.split("-")[0]
-    header = {
-        "send_message": "Approve send?",
-        "send_reply":   "Approve reply?",
-        "book_demo":    "Send booking link?",
-        "run_batch":    "Run batch?",
-    }.get(approval.kind, "Approve action?")
+    """No-op: approvals now surface on the dashboard /approvals page.
 
-    body = f"{approval.summary}\n\nID: {short}"
-    res = notifier.send_buttons(
-        body=body,
-        header=header,
-        buttons=[
-            notifier.Button(id=f"{APPROVE_PREFIX}:{aid}", title="✅ Approve"),
-            notifier.Button(id=f"{REJECT_PREFIX}:{aid}", title="❌ Reject"),
-        ],
-    )
-
-    update: dict = {}
-    if res.ok and res.provider_message_id:
-        update["notify_message_id"] = res.provider_message_id
-    if not res.ok:
-        # Record the failure on the row so we can see why it didn't fire.
-        update["raw"] = {"notify_error": res.error, "window_closed": res.window_closed}
-    if update:
-        client().table("approval_requests").update(update).eq("id", approval.id).execute()
+    Kept as a stub so `request_approval(..., notify=True)` callers don't break.
+    """
+    return
 
 
 # --------------------- read ---------------------
@@ -238,15 +208,3 @@ def wait_for(approval_id: str, *, timeout_seconds: float = 60.0, poll_seconds: f
     return get(approval_id)
 
 
-# --------------------- helpers parsing button IDs ---------------------
-
-def parse_button_id(button_id: str) -> tuple[str, str] | None:
-    """Return (decision, approval_id) for known button payloads."""
-    if not button_id or ":" not in button_id:
-        return None
-    prefix, _, aid = button_id.partition(":")
-    if prefix == APPROVE_PREFIX:
-        return ("approved", aid)
-    if prefix == REJECT_PREFIX:
-        return ("rejected", aid)
-    return None

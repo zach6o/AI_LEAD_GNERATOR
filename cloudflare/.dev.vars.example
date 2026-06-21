@@ -1,0 +1,5 @@
+# Copy to .dev.vars (gitignored) for `wrangler dev`. Production uses `wrangler secret put`.
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=
+FLY_TRIGGER_URL=https://YOUR_APP.fly.dev/api/trigger
+FLY_TRIGGER_TOKEN=

@@ -1,7 +1,7 @@
 """Print the best prospects to actually pitch first.
 
 Uses Agent 3 output (`opportunities`) when available — that's the most
-useful ranking because it includes INR revenue impact and confidence.
+useful ranking because it includes NPR revenue impact and confidence.
 Falls back to the Agent 1 + Agent 2 composite when an opportunity row
 hasn't been scored yet.
 """
@@ -62,7 +62,7 @@ def main(limit: int = 15) -> None:
     ranked.sort(key=lambda x: x["rev"], reverse=True)
     ranked = ranked[:limit]
 
-    t = Table(title="Top opportunities (sorted by est. monthly revenue impact, INR)")
+    t = Table(title="Top opportunities (sorted by est. monthly revenue impact, NPR)")
     t.add_column("Rev /mo", justify="right", style="bold green")
     t.add_column("ROI mo", justify="right")
     t.add_column("Conf", justify="right")
@@ -71,7 +71,7 @@ def main(limit: int = 15) -> None:
     t.add_column("Phone")
 
     for r in ranked:
-        rev = f"₹{r['rev']:,}" if r["rev"] else "-"
+        rev = f"रू{r['rev']:,}" if r["rev"] else "-"
         roi = f"{r['roi']}" if r["roi"] is not None else "-"
         t.add_row(rev, roi, str(r["conf"]), r["pitch"], r["name"][:36], r["phone"])
 

@@ -6,7 +6,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-# Windows console defaults to cp1252 which can't render ₹ and other UTF-8.
+# Windows console defaults to cp1252 which can't render रू and other UTF-8.
 if sys.platform == "win32":
     try:
         sys.stdout.reconfigure(encoding="utf-8")
@@ -33,7 +33,7 @@ from .agents.outreach_sender import run_batch, request_approval_for_drafts
 from .agents.email_enricher import enrich_all
 from .agents.reply_monitor import run_once as run_reply_monitor
 from .agents.demo_booker import run_once as run_demo_booker
-from .operator import approvals, notifier
+from .operator import approvals
 
 app = typer.Typer(add_completion=False, help="AI Lead Generator")
 console = Console()
@@ -47,7 +47,7 @@ def _root() -> None:
 @app.command()
 def hunt(
     niche: str = typer.Option(..., "--niche", "-n", help="PRD niche, e.g. 'restaurants'"),
-    location: str = typer.Option(..., "--location", "-l", help="e.g. 'Mumbai, India'"),
+    location: str = typer.Option(..., "--location", "-l", help="e.g. 'Kathmandu, Nepal'"),
     limit: int = typer.Option(20, "--limit", help="Max prospects to fetch (<=60)"),
     region_code: str = typer.Option(
         None, "--region", help="ISO country code, e.g. 'IN', 'US'. Optional."
@@ -191,17 +191,16 @@ def enrich(
 
 @app.command()
 def send(
-    channel: str = typer.Option(None, "--channel", help="email | whatsapp | (omit for all)"),
     limit: int = typer.Option(25, "--limit", help="Max approved messages to send"),
     rate: float = typer.Option(2.0, "--rate", help="Seconds to wait between sends"),
     dry_run: bool = typer.Option(False, "--dry-run", help="List what would be sent; touch nothing"),
 ) -> None:
-    """Agent 7: send approved outreach messages via Gmail SMTP / WhatsApp Cloud API."""
-    if channel and channel not in {"email", "whatsapp"}:
-        console.print(f"[red]channel must be 'email' or 'whatsapp' — got {channel!r}[/red]")
-        raise typer.Exit(code=2)
+    """Agent 7: send approved outreach emails via Gmail SMTP.
 
-    stats, log = run_batch(channel=channel, limit=limit, rate_seconds=rate, dry_run=dry_run)
+    WhatsApp + LinkedIn drafts are copy-paste only — open the dashboard, copy
+    the body, send manually, then tap 'Mark sent'.
+    """
+    stats, log = run_batch(channel="email", limit=limit, rate_seconds=rate, dry_run=dry_run)
 
     t = Table(title="Send results" + (" (DRY-RUN)" if dry_run else ""))
     t.add_column("Channel")
@@ -241,7 +240,7 @@ def serve(
 def opportunities(
     limit: int = typer.Option(50, "--limit", help="Max prospects to score"),
 ) -> None:
-    """Agent 3: turn analyses into concrete pitches with INR revenue + ROI."""
+    """Agent 3: turn analyses into concrete pitches with NPR revenue + ROI."""
     targets = fetch_pending_for_opps(limit)
     if not targets:
         console.print("[yellow]No pending prospects for opportunity scoring.[/yellow]")
@@ -260,7 +259,7 @@ def opportunities(
         analysis = analyses[0] if analyses else None
         opp = find_opportunity(p, analysis)
         save_opportunity(opp)
-        rev = f"₹{opp.monthly_revenue_impact_inr:,}" if opp.monthly_revenue_impact_inr else "-"
+        rev = f"रू{opp.monthly_revenue_impact_inr:,}" if opp.monthly_revenue_impact_inr else "-"
         roi = f"{opp.roi_months}" if opp.roi_months is not None else "-"
         t.add_row(
             str(opp.confidence),
@@ -276,18 +275,17 @@ def opportunities(
 @app.command()
 def monitor(
     limit: int = typer.Option(50, "--limit", help="Max IMAP messages to fetch this poll"),
-    no_notify: bool = typer.Option(False, "--no-notify", help="Skip WhatsApp notifications"),
 ) -> None:
-    """Agent 8: poll Gmail IMAP for prospect replies, classify, notify operator."""
+    """Agent 8: poll Gmail IMAP for prospect replies and classify. Replies surface on the dashboard."""
     try:
-        res = run_reply_monitor(max_messages=limit, notify=not no_notify)
+        res = run_reply_monitor(max_messages=limit)
     except Exception as e:
         console.print(f"[red]Monitor failed:[/red] {type(e).__name__}: {e}")
         raise typer.Exit(code=1)
 
     console.print(
         f"[bold]Replies:[/bold] fetched={res.fetched}  matched={res.matched}  "
-        f"unmatched={res.unmatched}  dup={res.duplicates}  notified={res.notified}"
+        f"unmatched={res.unmatched}  dup={res.duplicates}"
     )
     if res.by_intent:
         t = Table(title="Intents")
@@ -351,23 +349,6 @@ def pending(
         first_line = a.summary.splitlines()[0] if a.summary else "(no summary)"
         t.add_row(a.id.split("-")[0], a.kind, first_line[:80])
     console.print(t)
-
-
-@app.command("operator-test")
-def operator_test(
-    text: str = typer.Option("Ping from agent 👋", "--text", help="Message body"),
-) -> None:
-    """Send a test WhatsApp message to your configured operator number."""
-    res = notifier.send_text(text)
-    if res.ok:
-        console.print(f"[green]Sent.[/green] provider_id={res.provider_message_id}")
-    else:
-        console.print(f"[red]Failed:[/red] {res.error}")
-        if res.window_closed:
-            console.print(
-                "[yellow]Note:[/yellow] the 24h window is closed. Send any message "
-                "from your WhatsApp to the bot first, then retry."
-            )
 
 
 if __name__ == "__main__":

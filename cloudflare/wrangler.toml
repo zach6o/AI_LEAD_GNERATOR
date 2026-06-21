@@ -1,0 +1,17 @@
+name = "ai-lead-generator-dashboard"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Secrets set via `wrangler secret put`:
+#   SUPABASE_URL
+#   SUPABASE_SERVICE_ROLE_KEY
+#   FLY_TRIGGER_URL                (e.g. https://your-app.fly.dev/api/trigger)
+#   FLY_TRIGGER_TOKEN              (shared secret you also set on the Fly side)
+
+[vars]
+PIPELINE_STAGES = "new,analyzed,approved,contacted,replied,demo_scheduled,proposal_sent,won,lost"
+
+# Optional: nightly Cron to nudge Fly.io to run the reply monitor.
+# [triggers]
+# crons = ["*/10 * * * *"]

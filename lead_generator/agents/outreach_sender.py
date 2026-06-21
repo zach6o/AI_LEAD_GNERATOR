@@ -4,9 +4,9 @@ Reads `outreach_messages` rows with status='approved' and dispatches each one
 to the appropriate channel. NEVER sends a message that isn't approved (that
 PRD rule is enforced at the query level: we never even look at draft rows).
 
-When REQUIRE_APPROVAL_SENDS is true, the sender additionally refuses any
-message that doesn't have a matching `approved` approval_request — the
-operator must explicitly tap [Approve] in WhatsApp for each one.
+Only email is auto-sendable. WhatsApp + LinkedIn are draft-only: the operator
+copies the body from the dashboard and sends manually, then marks the row
+sent via the "Mark sent" button.
 
 Each attempt is recorded on the row: attempts++, last_attempt_at=now(). On
 success we flip status to 'sent', store provider_message_id, and bump the
@@ -24,10 +24,9 @@ from ..db import client
 from ..operator import approvals
 from ..senders.base import SendResult
 from ..senders.gmail_smtp import send_email
-from ..senders.whatsapp_cloud import send_whatsapp
 
 
-SUPPORTED_CHANNELS = ("email", "whatsapp")
+SUPPORTED_CHANNELS = ("email",)
 
 
 @dataclass
@@ -94,11 +93,8 @@ def request_approval_for_drafts(limit: int = 50) -> tuple[int, int]:
         if d["channel"] == "email" and not p.get("email"):
             skipped += 1
             continue
-        if d["channel"] == "whatsapp" and not p.get("phone"):
-            skipped += 1
-            continue
-        if d["channel"] == "linkedin":
-            skipped += 1   # LinkedIn drafts are copy-paste only — no sender
+        if d["channel"] in {"whatsapp", "linkedin"}:
+            skipped += 1   # drafts are copy-paste only — no automated sender
             continue
 
         # If an approval is already pending for this message, don't open a duplicate.
@@ -137,12 +133,7 @@ def _send_one(msg: dict) -> SendResult:
             subject=msg.get("subject") or "(no subject)",
             body=msg["body"],
         )
-    if channel == "whatsapp":
-        return send_whatsapp(
-            to_phone=prospect.get("phone") or "",
-            body=msg["body"],
-        )
-    # We don't send LinkedIn — drafts stay as copy-paste material.
+    # WhatsApp + LinkedIn are draft-only — operator copies from the dashboard.
     return SendResult(ok=False, error=f"channel '{channel}' is not sendable (drafts only)")
 
 

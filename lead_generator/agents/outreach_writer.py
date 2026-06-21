@@ -23,10 +23,10 @@ from ..db import client
 
 # ---------- helpers ----------
 
-def _inr(n: int | None) -> str:
+def _npr(n: int | None) -> str:
     if not n:
         return ""
-    return f"₹{int(n):,}"
+    return f"रू{int(n):,}"
 
 
 _GENERIC_OPENERS = {
@@ -39,7 +39,7 @@ _GENERIC_OPENERS = {
 def _first_name_from_business(name: str) -> str:
     """Try to extract an owner-ish handle from the business name.
 
-    Many Indian SMBs are named after the owner ('Dr Idris Holy Dental Clinic'),
+    Many Nepali SMBs are named after the owner ('Dr Sharma Holy Dental Clinic'),
     in which case we want 'Idris'. Otherwise it's much safer to use 'there'
     than to risk "Hi Smile,".
     """
@@ -59,7 +59,7 @@ def _first_name_from_business(name: str) -> str:
 def _short_location(location: str | None) -> str:
     """Reduce a Google formatted address to something usable in a sentence.
 
-    'Andheri West, Mumbai, Maharashtra 400053' -> 'Andheri West, Mumbai'.
+    'Thamel, Kathmandu, Bagmati 44600' -> 'Thamel, Kathmandu'.
     Returns 'your area' if we can't extract anything short and safe.
     """
     if not location:
@@ -93,8 +93,8 @@ class Message:
 def _email_initial(p: dict, opp: dict, analysis: dict | None, s) -> Message:
     name = _first_name_from_business(p["business_name"])
     service = opp["primary_service"]
-    one_time = _inr(opp.get("our_one_time_inr"))
-    monthly = _inr(opp.get("our_monthly_inr"))
+    one_time = _npr(opp.get("our_one_time_inr"))
+    monthly = _npr(opp.get("our_monthly_inr"))
     reviews = p.get("google_reviews") or 0
     rating = p.get("google_rating") or ""
     location_short = _short_location(p.get("location"))
@@ -178,7 +178,7 @@ def _email_followup_2(p: dict, opp: dict, s) -> Message:
 
 def _whatsapp_initial(p: dict, opp: dict, s) -> Message:
     name = _first_name_from_business(p["business_name"])
-    rev = _inr(opp.get("monthly_revenue_impact_inr"))
+    rev = _npr(opp.get("monthly_revenue_impact_inr"))
     service = opp["primary_service"]
     short = {
         "Website Development":       "build you a high-converting website",
@@ -220,7 +220,7 @@ def _whatsapp_followup_2(p: dict, opp: dict, s) -> Message:
 
 def _linkedin_initial(p: dict, opp: dict, s) -> Message:
     name = _first_name_from_business(p["business_name"])
-    rev = _inr(opp.get("monthly_revenue_impact_inr"))
+    rev = _npr(opp.get("monthly_revenue_impact_inr"))
     service_short = opp["primary_service"].lower()
     body = (
         f"Hi {name} — I help {p.get('industry','local')} businesses like "

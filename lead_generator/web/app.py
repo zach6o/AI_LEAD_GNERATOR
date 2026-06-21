@@ -7,12 +7,11 @@ import re
 from urllib.parse import quote
 
 from fastapi import BackgroundTasks, FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from ..db import client
 from ..operator import approvals as approvals_mod
-from ..operator import webhook as wa_webhook
 
 if sys.platform == "win32":
     try:
@@ -24,15 +23,17 @@ if sys.platform == "win32":
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
-# Filter for INR currency formatting.
-def _inr(value):
+# Filter for NPR (Nepali rupee) currency formatting.
+def _npr(value):
     if value is None or value == "":
         return "—"
     try:
-        return f"₹{int(value):,}"
+        return f"रू{int(value):,}"
     except (TypeError, ValueError):
         return str(value)
-templates.env.filters["inr"] = _inr
+templates.env.filters["npr"] = _npr
+# Back-compat alias: existing templates may still reference `| inr`.
+templates.env.filters["inr"] = _npr
 
 
 def _wa_link(phone: str | None, body: str | None) -> str:
@@ -458,38 +459,11 @@ def mark_sent(message_id: str, prospect_id: str = Form(...)):
     return RedirectResponse(url=f"/prospects/{prospect_id}", status_code=303)
 
 
-# ---------- WhatsApp operator webhook ----------
-# Meta GETs this URL with hub.mode/verify_token/challenge to subscribe,
-# then POSTs message events. Point your Meta App webhook at:
-#   https://<public-url>/webhook/whatsapp
-
-@app.get("/webhook/whatsapp", response_class=PlainTextResponse)
-def whatsapp_verify(request: Request):
-    qp = request.query_params
-    status, body = wa_webhook.verify_handshake(
-        mode=qp.get("hub.mode"),
-        token=qp.get("hub.verify_token"),
-        challenge=qp.get("hub.challenge"),
-    )
-    if status != 200:
-        raise HTTPException(status, body)
-    return PlainTextResponse(body)
-
-
-@app.post("/webhook/whatsapp")
-async def whatsapp_event(request: Request):
-    raw = await request.body()
-    sig = request.headers.get("x-hub-signature-256")
-    if not wa_webhook.verify_signature(raw, sig):
-        # Don't echo why — that helps attackers tune their forgery.
-        raise HTTPException(403, "signature mismatch")
-    import json
-    try:
-        payload = json.loads(raw or b"{}")
-    except ValueError:
-        raise HTTPException(400, "bad json")
-    audit = wa_webhook.handle_event(payload)
-    return {"ok": True, **audit}
+@app.post("/prospects/{prospect_id}/mark-replied")
+def mark_replied(prospect_id: str):
+    """One-click 'I got a reply' — bumps the prospect into the 'replied' stage."""
+    client().table("prospects").update({"stage": "replied"}).eq("id", prospect_id).execute()
+    return RedirectResponse(url=f"/prospects/{prospect_id}?msg=Marked+as+replied", status_code=303)
 
 
 @app.post("/prospects/{prospect_id}/draft")

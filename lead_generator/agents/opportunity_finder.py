@@ -1,10 +1,10 @@
 """Agent 3 — Opportunity Finder.
 
 Takes a prospect + their website analysis and produces a concrete pitch with
-INR revenue impact, ROI months, and a confidence score the sales rep can trust.
+NPR revenue impact, ROI months, and a confidence score the sales rep can trust.
 
 The estimates are rule-based and intentionally conservative. The goal is to
-give the outreach a number to anchor on ("we could add ~₹40k/month in
+give the outreach a number to anchor on ("we could add ~रू40k/month in
 recovered bookings"), not to predict the future. All assumptions are stored
 in the `reasoning` jsonb so a human can challenge them.
 """
@@ -17,7 +17,7 @@ from typing import Any
 from ..db import client
 
 
-# ---------- industry economics (INR) ----------
+# ---------- industry economics (NPR) ----------
 # AOV = average order/visit value. "Missed factor" is the fraction of online
 # discoverable demand we estimate the prospect is leaving on the table when
 # the relevant feature is missing.
@@ -55,7 +55,7 @@ MAX_MONTHLY_CUSTOMERS: dict[str, int] = {
     "other":          400,
 }
 
-# ---------- our pricing (INR) ----------
+# ---------- our pricing (NPR) ----------
 PRICING: dict[str, dict[str, int]] = {
     "Website Development":         {"one_time": 40000, "monthly": 0},
     "Website Redesign":            {"one_time": 25000, "monthly": 0},
@@ -186,7 +186,7 @@ def _estimate(prospect: dict, analysis: dict | None, service: str) -> dict[str, 
 
     elif service == "AI Customer Support":
         hours_saved = 20
-        # Cost saved ~= 20 hrs/wk × ₹200/hr × 4.3 weeks = ~₹17k/mo
+        # Cost saved ~= 20 hrs/wk × रू200/hr × 4.3 weeks = ~रू17k/mo
         monthly_revenue_impact = 17000
         reasoning_extra["assumption"] = (
             "Replaces ~20 hrs/week of L1 support load; framed here as cost saved."
@@ -255,7 +255,7 @@ def _confidence(prospect: dict, analysis: dict | None, est: dict) -> int:
 def _pitch_summary(prospect: dict, analysis: dict | None, service: str, est: dict) -> str:
     name = prospect.get("business_name") or "your business"
     impact = est.get("monthly_revenue_impact_inr") or 0
-    rev_str = f"₹{impact:,}/month" if impact else "measurable upside"
+    rev_str = f"रू{impact:,}/month" if impact else "measurable upside"
     industry = (prospect.get("industry") or "other").replace("_", " ")
 
     if service == "Website Development":

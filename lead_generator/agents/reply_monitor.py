@@ -1,7 +1,7 @@
 """Agent 8 — Reply Monitor.
 
-Polls Gmail via IMAP, matches new mail to prospects, classifies intent, and
-notifies the operator on WhatsApp. Prospect stage moves to:
+Polls Gmail via IMAP, matches new mail to prospects, and classifies intent.
+Replies surface on the dashboard's prospect detail page. Prospect stage moves to:
   - 'replied'        for any genuine response (interested/question/unclear)
   - 'lost'           for explicit unsubscribe / not interested
 
@@ -24,7 +24,6 @@ from urllib.parse import urlparse
 
 from ..db import client
 from ..sources.gmail_imap import ParsedMessage, poll_unread
-from ..operator import notifier
 
 
 # --------------------- intent classification ---------------------
@@ -298,26 +297,6 @@ def _summarise(msg: ParsedMessage, prospect_name: str | None, intent: str) -> st
     )
 
 
-def _notify_operator(msg: ParsedMessage, match: MatchResult, intent: str) -> None:
-    name: str | None = None
-    if match.prospect_id:
-        rows = (
-            client()
-            .table("prospects")
-            .select("business_name")
-            .eq("id", match.prospect_id)
-            .limit(1)
-            .execute()
-            .data
-        )
-        if rows:
-            name = rows[0].get("business_name")
-    text = _summarise(msg, name, intent)
-    # Plain text — no buttons. The Demo Booker creates its own approval prompt
-    # for "interested" replies in a separate step.
-    notifier.send_text(text)
-
-
 # --------------------- orchestration ---------------------
 
 @dataclass
@@ -327,11 +306,10 @@ class MonitorResult:
     unmatched: int = 0
     duplicates: int = 0
     by_intent: dict = None     # type: ignore[assignment]
-    notified: int = 0
 
 
-def run_once(*, max_messages: int | None = None, notify: bool = True) -> MonitorResult:
-    """One full poll: fetch, match, classify, persist, notify."""
+def run_once(*, max_messages: int | None = None) -> MonitorResult:
+    """One full poll: fetch, match, classify, persist. Replies surface on the dashboard."""
     result = MonitorResult(by_intent={})
     messages = poll_unread(max_messages=max_messages)
 
@@ -356,9 +334,5 @@ def run_once(*, max_messages: int | None = None, notify: bool = True) -> Monitor
             _bump_prospect(match.prospect_id, intent)
 
         result.by_intent[intent] = result.by_intent.get(intent, 0) + 1
-
-        if notify and intent != "auto_reply":
-            _notify_operator(m, match, intent)
-            result.notified += 1
 
     return result

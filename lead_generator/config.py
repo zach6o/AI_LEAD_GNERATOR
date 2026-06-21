@@ -33,21 +33,9 @@ class Settings(BaseSettings):
     imap_folder: str = Field("INBOX", alias="IMAP_FOLDER")
     imap_max_per_poll: int = Field(50, alias="IMAP_MAX_PER_POLL")
 
-    whatsapp_access_token: str = Field("", alias="WHATSAPP_ACCESS_TOKEN")
-    whatsapp_phone_number_id: str = Field("", alias="WHATSAPP_PHONE_NUMBER_ID")
-    whatsapp_template_name: str = Field("cold_outreach_v1", alias="WHATSAPP_TEMPLATE_NAME")
-    whatsapp_template_language: str = Field("en_US", alias="WHATSAPP_TEMPLATE_LANGUAGE")
-
-    # ---- Operator-side WhatsApp (talk to the agent) ----
-    # Your personal number, digits only, e.g. 919876543210 (no '+').
-    operator_whatsapp_number: str = Field("", alias="OPERATOR_WHATSAPP_NUMBER")
-    # Anything you choose; Meta echoes it back during webhook verification.
-    whatsapp_webhook_verify_token: str = Field("", alias="WHATSAPP_WEBHOOK_VERIFY_TOKEN")
-    # From your Meta App dashboard. Used to verify X-Hub-Signature-256.
-    whatsapp_app_secret: str = Field("", alias="WHATSAPP_APP_SECRET")
-
     # ---- Approval gates ----
     # Each flag, when true, forces the agent to ask before doing it.
+    # Approvals live on the dashboard /approvals page (no WhatsApp notifications).
     require_approval_sends:   bool = Field(True,  alias="REQUIRE_APPROVAL_SENDS")
     require_approval_replies: bool = Field(True,  alias="REQUIRE_APPROVAL_REPLIES")
     require_approval_demos:   bool = Field(True,  alias="REQUIRE_APPROVAL_DEMOS")

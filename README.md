@@ -17,7 +17,7 @@ python -m venv .venv
 pip install -r requirements.txt
 copy .env.example .env
 # Fill in SUPABASE_SERVICE_ROLE_KEY and GOOGLE_PLACES_API_KEY
-python -m lead_generator.cli hunt --niche restaurants --location "Mumbai, India" --limit 25
+python -m lead_generator.cli hunt --niche restaurants --location "Kathmandu, Nepal" --limit 25
 ```
 
 ## Layout

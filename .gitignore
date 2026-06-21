@@ -12,3 +12,4 @@ build/
 *.log
 .dist/
 .claude/settings.local.json
+.dashboard_preview.html

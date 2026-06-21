@@ -6,7 +6,7 @@ Strategy (in priority order):
   3. Tie-break by preferring info@/contact@/hello@ over personal-looking ones,
      and rejecting noise (noreply@, wordpress@, png/jpg false positives).
 
-Most Indian SMB sites surface the email on /contact, /about, or in the footer.
+Most Nepali SMB sites surface the email on /contact, /about, or in the footer.
 We try a small fixed set of paths rather than crawling the whole site.
 """
 
